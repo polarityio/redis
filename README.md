@@ -1,25 +1,60 @@
-# Polarity Redis Server Example Integration
+# Polarity Redis Server Integration
 
-![image](https://cloud.githubusercontent.com/assets/306319/25863866/5be1f68e-34bb-11e7-8074-dcc67c3b2bd7.png)
-
-This integration is a framework to allow you to create customized integrations for connecting to and executing queries against a Redis Server.
+<div>
+  <img width="400" alt="Integration Example" src="./assets/overlay.png">
+</div>
 
 ## Overview
 
-The Redis Example integration provides a working implementation of an integration that can connect to a Redis database.  This integration is setup to receive `IPv4` addresses.  If you would like to modify the type of data sent to the integration please modify the `entityTypes` parameter in the `config/config.js` file.
+The Redis integration provides a generic method for querying Redis (including Elasticache for Redis).  The integration issues a simple `GET` request for a configured key pattern and will return the value to display in the Overlay Window.
 
-This integration does a simple `GET` lookup into Redis and assumes that the value of the entity (in this case an IP) is the `key` in Redis.  You can provide more complex lookup logic by reimplementing the `doRedisLookup()` method.
-
-This integration also assumes that the `value` stored in Redis is stored as a JSON string (i.e., a string that can be parsed back into a JSON object).  This behavior can be modified in the `_parseRedisResult` method. 
-
+The integration supports key values that are properly formatted JSON as well as plain strings.  
 
 | ![image](https://cloud.githubusercontent.com/assets/306319/25863892/70619f4c-34bb-11e7-8a99-b521c1a0c796.png) |
 |----|
-|*(Example key-value pair in Redis)*|
+|*(Example key-value pair in Redis with JSON formatting)*|
 
-Further information on how to use the Node Redis client can be found at [https://github.com/NodeRedis/node_redis](https://github.com/NodeRedis/node_redis).
+If the value is JSON, the integration will display the output as a formatted JSON object, or in a tabular format.  If the value is a simple string then the string will be displayed.
 
-The integration currently outputs the data returned into a key-value table.
+For JSON objects the integration supports specifying which keys should be used as summary tags as well as specifying labels for those keys.
+
+## Options
+
+### Host
+
+The hostname of the server hosting your Redis instance.  This option should be set to "Only Admins can view and edit".
+
+### Redis Port
+
+The port your Redis instance is listening on.  Defaults to 6379.  This option should be set to "Only Admins can view and edit".
+
+### Redis Database
+
+The Redis database you are connecting to. Defaults to 0. This option should be set to "Only Admins can view and edit".
+
+### Authentication Password
+
+If provided, the integration will first authenticate to your Redis instance as the "default" user via the provided password. If left blank, no authentication will be used. The integration does not currently support Redis ACLs. This option should be set to "Only Admins can view and edit".
+
+### Redis Key Pattern
+
+The Redis key pattern you wish to lookup. The string "{{entity}}" will be replaced by the entity value being looked up.
+
+### Value is JSON
+
+If checked, the integration will assume the value of the key is a properly formatted JSON object. If not checked, the integration treats the value as a string.
+
+### Summary Tags
+
+If the "Value is JSON" option is checked, then you can use this option to specify the JSON keys that should be displayed as summary tags. Provide a comma delimited list of keys (JSON dot notation is supported). To add labels to the keys, format the key as "<label>:<key>".
+
+### View JSON as Table
+
+If checked and the "Value is JSON" option is enabled, the JSON will be displayed as a table. If not checked, the JSON will be displayed as a JSON object.
+
+### Enable TLS
+
+If checked, the integration will attempt to connect to your Redis instance over TLS (supported from Redis version 6 onward). See https://redis.io/topics/encryption for more information. This option should be set to "Only Admins can view and edit".
 
 ## Installation Instructions
 

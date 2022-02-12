@@ -1,0 +1,11 @@
+{{#if isValueString}}
+  {{details}}
+{{else}}
+  {{#if block.userOptions.viewAsTable}}
+    {{object-to-table block.data.details}}
+  {{else}}
+    <div class="json-block">
+      <pre>{{{json}}}</pre>
+    </div>
+  {{/if}}
+{{/if}}
