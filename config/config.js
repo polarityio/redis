@@ -101,7 +101,7 @@ module.exports = {
       key: 'key',
       name: 'Redis Key Pattern',
       description:
-        'The Redis key pattern you wish to lookup.  The string "{{entity}}" will be replaced by the entity value being looked up.',
+        'The Redis key pattern you wish to lookup.  The string "{{entity}}" will be replaced by the entity value being looked up. For example, if your Redis keys are of the format "ip:8.8.8.8", you would set the key pattern to "ip:{{entity}}".',
       default: '{{entity}}',
       type: 'text',
       userCanEdit: false,

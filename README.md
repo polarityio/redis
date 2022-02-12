@@ -38,7 +38,7 @@ If provided, the integration will first authenticate to your Redis instance as t
 
 ### Redis Key Pattern
 
-The Redis key pattern you wish to lookup. The string "{{entity}}" will be replaced by the entity value being looked up.
+The Redis key pattern you wish to lookup. The string "{{entity}}" will be replaced by the entity value being looked up.  For example, if your Redis keys are of the format "ip:8.8.8.8", you would set the key pattern to "ip:{{entity}}".
 
 ### Value is JSON
 
