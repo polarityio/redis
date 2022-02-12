@@ -49,6 +49,7 @@ module.exports = {
       file: './templates/block.hbs'
     }
   },
+  request: { },
   /**
    * Options that are displayed to the user/admin in the Polarity integration user-interface.  Should be structured
    * as an array of option objects.
