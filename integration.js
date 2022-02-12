@@ -1,10 +1,13 @@
 'use strict';
 
-let redis = require('redis');
-let _ = require('lodash');
-let async = require('async');
+const redis = require('redis');
+const _ = require('lodash');
+const async = require('async');
+
+const entityTemplateReplacementRegex = /{{entity}}/gi;
+
 let Logger;
-let client;
+let client = null;
 let clientOptions;
 
 /**
@@ -13,38 +16,35 @@ let clientOptions;
  * @param logger
  */
 function startup(logger) {
-    Logger = logger;
+  Logger = logger;
 }
 
-function doLookup(entities, options, cb) {
-    let lookupResults = [];
+async function doLookup(entities, options, cb) {
+  let lookupResults = [];
 
-    Logger.trace({entities: entities}, 'doLookup');
+  Logger.trace({ entities: entities }, 'doLookup');
 
-    _initRedisClient(options, function(err){
-        if(err){
-            cb(err);
-            return;
-        }
+  try {
+    await _initRedisClient(options);
+  } catch (error) {
+    Logger.error(error, 'Failed to initialize Redis client');
+    return cb(errorToPojo(error));
+  }
 
-        async.each(entities, function (entityObj, next) {
-            if (entityObj.isIPv4) {
-                _lookupIp(entityObj, options, function (err, result) {
-                    if (err) {
-                        next(err);
-                    } else {
-                        lookupResults.push(result);
-                        next(null);
-                    }
-                });
-            } else {
-                next(null);
-            }
-        }, function (err) {
-            Logger.trace({lookupResults: lookupResults}, 'Lookup Results');
-            cb(err, lookupResults);
-        });
-    });
+  async.each(
+    entities,
+    async function (entityObj) {
+      const result = await _lookupEntity(entityObj, options);
+      lookupResults.push(result);
+    },
+    function (err) {
+      if (err) {
+        Logger.error(err, 'lookupEntity error');
+      }
+      Logger.trace({ lookupResults: lookupResults }, 'Lookup Results');
+      cb(err, lookupResults);
+    }
+  );
 }
 
 /**
@@ -56,46 +56,56 @@ function doLookup(entities, options, cb) {
  * @param cb
  * @private
  */
-function _initRedisClient(integrationOptions, cb) {
-    if (typeof clientOptions === 'undefined') {
-        clientOptions = {
-            host: integrationOptions.host,
-            port: integrationOptions.port,
-            database: integrationOptions.database
-        };
-    }
-
-    let newOptions = {
+async function _initRedisClient(integrationOptions) {
+  if (typeof clientOptions === 'undefined') {
+    clientOptions = {
+      socket: {
         host: integrationOptions.host,
         port: integrationOptions.port,
-        database: integrationOptions.database
+        tls: integrationOptions.enableTls
+      },
+      database: +integrationOptions.database
     };
 
-    if (typeof client === 'undefined' || _optionsHaveChanged(clientOptions, newOptions)) {
-        clientOptions = newOptions;
-        _closeRedisClient(client, function(){
-            client = redis.createClient(clientOptions);
-            client.select(integrationOptions.database, function(err){
-                if(err){
-                    Logger.error({err:err}, 'Error Changing Database');
-                }
-                Logger.info({con:clientOptions}, 'Created Redis Client');
-                cb(null);
-            });
-        });
-    }else{
-        cb(null);
+    if (integrationOptions.password) {
+      clientOptions.password = integrationOptions.password;
     }
-}
+  }
 
-function _closeRedisClient(myClient, cb){
-    if(typeof myClient !== 'undefined'){
-        Logger.info("Closing Existing Redis Client");
-        client.quit();
-        client.on('end', cb);
-    }else{
-        cb(null);
+  let newOptions = {
+    socket: {
+      host: integrationOptions.host,
+      port: integrationOptions.port,
+      tls: integrationOptions.enableTls
+    },
+    database: +integrationOptions.database
+  };
+
+  if (integrationOptions.password) {
+    newOptions.password = integrationOptions.password;
+  }
+
+  if (client === null || _optionsHaveChanged(clientOptions, newOptions)) {
+    clientOptions = newOptions;
+    Logger.debug({ clientOptions, isOpen: client ? client.isOpen : false }, 'Client Options');
+    if (client !== null && client.isOpen) {
+      Logger.info('Disconnecting Existing Redis Client');
+      // You can only quit if the client is open
+      await client.quit();
+      client = null;
+      Logger.info('Finished disconnecting');
     }
+
+    try {
+      client = redis.createClient(clientOptions);
+      await client.connect();
+      await client.select(integrationOptions.database);
+    } catch (connectError) {
+      Logger.error(connectError);
+      client = null;
+      throw connectError;
+    }
+  }
 }
 
 /**
@@ -108,39 +118,73 @@ function _closeRedisClient(myClient, cb){
  * @private
  */
 function _optionsHaveChanged(options1, options2) {
-    return !_.isEqual(options1, options2);
+  return !_.isEqual(options1, options2);
 }
 
-function _lookupIp(entityObj, options, cb) {
-    _doRedisLookup(entityObj.value, function (err, result) {
-        if (err) {
-            Logger.error({err: err}, 'Error running sql statement');
-            cb(err);
-            return;
-        } else {
-            if (result) {
-                // In our example we are storing valid JSON as the Redis key's value.  As a result, we need
-                // to parse it pack into a javascript object literal.
-                let resultAsJson = _parseRedisResult(result);
+async function _lookupEntity(entityObj, options) {
+  const result = await _doRedisLookup(entityObj.value, options);
+  if (result) {
+    // In our example we are storing valid JSON as the Redis key's value.  As a result, we need
+    // to parse it pack into a javascript object literal.
+    let parsedResult = _parseRedisResult(result, options);
 
-                cb(null, {
-                    // Required: This is the entity object passed into the integration doLookup method
-                    entity: entityObj,
-                    // Required: An object containing everything you want passed to the template
-                    data: {
-                        // Required: These are the tags that are displayed in your template
-                        summary: [resultAsJson.hostname],
-                        // Data that you want to pass back to the notification window details block
-                        details: resultAsJson
-                    }
-                });
-            } else {
-                // There was no data for this entity so we return `null` data which will cause the integration
-                // cache to cache this lookup as a miss.
-                cb(null, {entity: entityObj, data: null});
-            }
+    return {
+      // Required: This is the entity object passed into the integration doLookup method
+      entity: entityObj,
+      // Required: An object containing everything you want passed to the template
+      data: {
+        // Required: These are the tags that are displayed in your template
+        summary: _getSummaryTags(parsedResult, options),
+        // Data that you want to pass back to the notification window details block
+        details: parsedResult
+      }
+    };
+  } else {
+    // There was no data for this entity so we return `null` data which will cause the integration
+    // cache to cache this lookup as a miss.
+    return { entity: entityObj, data: null };
+  }
+}
+
+function _getSummaryTags(parsedResult, options) {
+  const tags = [];
+  if (typeof parsedResult === 'string') {
+    if (parsedResult.length > 20) {
+      tags.push(parsedResult.substring(0, 20) + '...');
+    } else {
+      tags.push(parsedResult);
+    }
+  } else {
+    options.summaryTags.split(',').forEach((token) => {
+      token = token.trim();
+      // token can have the format of 'displayValue:jsonKey' so we split on ':'
+      // and check.
+      const subTokens = token.split(':');
+
+      if (subTokens.length > 1) {
+        const displayValue = subTokens[0];
+        const key = subTokens[1];
+        const result = _.get(parsedResult, key);
+
+        Logger.info({ key, displayValue, result }, 'result');
+
+        if (typeof result !== 'undefined') {
+          tags.push(`${displayValue}: ${result}`);
         }
+      } else {
+        const key = subTokens[0];
+        const result = _.get(parsedResult, key);
+
+        Logger.info({ key, result }, 'result');
+
+        if (typeof result !== 'undefined') {
+          tags.push(result);
+        }
+      }
     });
+  }
+  Logger.debug({ tags }, 'Summary Tags');
+  return tags;
 }
 
 /**
@@ -151,8 +195,14 @@ function _lookupIp(entityObj, options, cb) {
  * @param cb
  * @private
  */
-function _doRedisLookup(entityValue, cb){
-    client.get(entityValue, cb);
+async function _doRedisLookup(entityValue, options) {
+  if (options.key.toLowerCase() === '{{entity}}') {
+    // no substitution needed since we are doing a straight key lookup
+    return await client.get(entityValue);
+  } else {
+    const lookupKey = options.key.replace(entityTemplateReplacementRegex, entityValue);
+    return await client.get(lookupKey);
+  }
 }
 
 /**
@@ -163,8 +213,29 @@ function _doRedisLookup(entityValue, cb){
  * @param redisResult
  * @private
  */
-function _parseRedisResult(redisResult){
-    return JSON.parse(redisResult);
+function _parseRedisResult(redisResult, options) {
+  if (options.isJson) {
+    try {
+      return JSON.parse(redisResult);
+    } catch (e) {
+      return 'The retrieved value was not properly formatted JSON.  Please uncheck the option JSON';
+    }
+  } else {
+    Logger.info({ redisResult }, 'Result');
+    return redisResult;
+  }
+}
+
+function errorToPojo(err, detail) {
+  return err instanceof Error
+    ? {
+        ...err,
+        name: err.name,
+        message: err.message,
+        stack: err.stack,
+        detail: detail ? detail : err.detail ? err.detail : err.message ? err.message : 'Unexpected error encountered'
+      }
+    : err;
 }
 
 /**
@@ -173,39 +244,39 @@ function _parseRedisResult(redisResult){
  * @param options
  */
 function validateOptions(userOptions, cb) {
-    Logger.debug({userOptions:userOptions}, 'Validating User Options');
+  Logger.debug({ userOptions: userOptions }, 'Validating User Options');
 
-    let errors = [];
+  let errors = [];
 
-    if (typeof userOptions.host.value !== 'string' ||
-        (typeof userOptions.host.value === 'string' && userOptions.host.value.length === 0)) {
-        errors.push({
-            key: 'host',
-            message: 'You must provide a host value'
-        })
-    }
+  if (
+    typeof userOptions.host.value !== 'string' ||
+    (typeof userOptions.host.value === 'string' && userOptions.host.value.length === 0)
+  ) {
+    errors.push({
+      key: 'host',
+      message: 'You must provide a host value'
+    });
+  }
 
-    if (typeof userOptions.port.value !== 'string' ||
-        (typeof userOptions.port.value === 'string' && userOptions.port.value.length === 0)) {
-        errors.push({
-            key: 'port',
-            message: 'You must provide the port Redis is running on'
-        })
-    }
+  if (_.isNaN(userOptions.port.value) || userOptions.port.value < 0) {
+    errors.push({
+      key: 'port',
+      message: 'You must provide the port Redis is running on'
+    });
+  }
 
-    if (typeof userOptions.database.value !== 'string' ||
-        (typeof userOptions.database.value === 'string' && userOptions.database.value.length === 0)) {
-        errors.push({
-            key: 'database',
-            message: 'You must provide the Redis database you are connecting to'
-        })
-    }
+  if (_.isNaN(userOptions.database.value) || userOptions.database.value < 0) {
+    errors.push({
+      key: 'database',
+      message: 'You must provide the Redis database you are connecting to'
+    });
+  }
 
-    cb(null, errors);
+  cb(null, errors);
 }
 
 module.exports = {
-    doLookup: doLookup,
-    startup: startup,
-    validateOptions: validateOptions
+  doLookup: doLookup,
+  startup: startup,
+  validateOptions: validateOptions
 };
