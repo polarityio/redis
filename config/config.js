@@ -49,7 +49,15 @@ module.exports = {
       file: './templates/block.hbs'
     }
   },
-  request: { },
+  // The following request options are not currently supported by the Redis integration
+  request: {
+    cert: '',
+    key: '',
+    passphrase: '',
+    ca: '',
+    proxy: '',
+    rejectUnauthorized: true
+  },
   /**
    * Options that are displayed to the user/admin in the Polarity integration user-interface.  Should be structured
    * as an array of option objects.
