@@ -16,8 +16,6 @@ module.exports = {
    * @required
    */
   acronym: 'RED',
-  logging: { level: 'info' },
-  entityTypes: ['*'],
   /**
    * Description for this integration which is displayed in the Polarity integrations user interface
    *
@@ -25,6 +23,9 @@ module.exports = {
    * @optional
    */
   description: 'Query Redis servers and return data for configured key patterns.',
+  logging: { level: 'info' },
+  entityTypes: ['*'],
+  defaultColor: 'light-gray',
   /**
    * An array of style files (css or less) that will be included for your integration. Any styles specified in
    * the below files can be used in your custom template.

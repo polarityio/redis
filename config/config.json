@@ -1,16 +1,13 @@
 {
   "name": "Redis",
   "acronym": "RED",
+  "description": "Query Redis servers and return data for configured key patterns.",
+  "entityTypes": ["*"],
+  "defaultColor": "light-gray",
   "logging": {
     "level": "info"
   },
-  "entityTypes": [
-    "*"
-  ],
-  "description": "Query Redis servers and return data for configured key patterns.",
-  "styles": [
-    "./styles/styles.less"
-  ],
+  "styles": ["./styles/styles.less"],
   "block": {
     "component": {
       "file": "./components/block.js"
