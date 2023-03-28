@@ -1,4 +1,5 @@
 {
+  "polarityIntegrationUuid": "fc528dd0-cce1-11ed-aeee-075d3490155d",
   "name": "Redis",
   "acronym": "RED",
   "description": "Query Redis servers and return data for configured key patterns.",
