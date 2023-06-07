@@ -1,8 +1,8 @@
 'use strict';
 
-const redis = require('redis');
 const _ = require('lodash');
 const async = require('async');
+const redis = require('redis');
 
 const entityTemplateReplacementRegex = /{{entity}}/gi;
 
