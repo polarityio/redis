@@ -2,6 +2,7 @@
 
 const _ = require('lodash');
 const async = require('async');
+const redis = require('redis');
 
 const entityTemplateReplacementRegex = /{{entity}}/gi;
 
@@ -56,8 +57,6 @@ async function doLookup(entities, options, cb) {
  * @private
  */
 async function _initRedisClient(integrationOptions) {
-  const redis = await import('redis');
-
   if (typeof clientOptions === 'undefined') {
     clientOptions = {
       socket: {
