@@ -3,7 +3,20 @@
   "name": "Redis",
   "acronym": "RED",
   "description": "Query Redis servers and return data for configured key patterns.",
-  "entityTypes": ["*"],
+  "entityTypes": [
+    "IPv4",
+    "IPv4CIDR",
+    "IPv6",
+    "domain",
+    "url",
+    "MD5",
+    "SHA1",
+    "SHA256",
+    "email",
+    "cve",
+    "MAC",
+    "string"
+  ],
   "defaultColor": "light-gray",
   "logging": {
     "level": "info"
@@ -16,13 +29,6 @@
     "template": {
       "file": "./templates/block.hbs"
     }
-  },
-  "request": {
-    "cert": "",
-    "key": "",
-    "passphrase": "",
-    "ca": "",
-    "proxy": ""
   },
   "options": [
     {
