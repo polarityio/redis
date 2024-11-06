@@ -1,11 +1,11 @@
 {
   "name": "Redis",
-  "version": "3.0.7",
+  "version": "3.0.8",
   "main": "./integration.js",
   "description": "Query Redis keys",
   "private": true,
   "dependencies": {
-    "async": "^3.2.3",
+    "async": "^3.2.5",
     "lodash": "^4.17.21",
     "redis": "4.0.6"
   }

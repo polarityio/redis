@@ -24,7 +24,7 @@ module.exports = {
    */
   description: 'Query Redis servers and return data for configured key patterns.',
   logging: { level: 'info' },
-  entityTypes: ['*'],
+  entityTypes: ['IPv4', 'IPv4CIDR', 'IPv6', 'domain', 'url', 'MD5', 'SHA1', 'SHA256', 'email', 'cve', 'MAC', 'string'],
   defaultColor: 'light-gray',
   /**
    * An array of style files (css or less) that will be included for your integration. Any styles specified in
@@ -56,7 +56,7 @@ module.exports = {
     key: '',
     passphrase: '',
     ca: '',
-    proxy: ""
+    proxy: ''
   },
   /**
    * Options that are displayed to the user/admin in the Polarity integration user-interface.  Should be structured
