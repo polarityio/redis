@@ -21,7 +21,9 @@
   "logging": {
     "level": "info"
   },
-  "styles": ["./styles/styles.less"],
+  "styles": [
+    "./styles/styles.less"
+  ],
   "block": {
     "component": {
       "file": "./components/block.js"
@@ -112,5 +114,10 @@
       "userCanEdit": false,
       "adminOnly": true
     }
-  ]
+  ],
+  "reducer": {
+    "details": {
+      "file": "./reducers/details.json"
+    }
+  }
 }

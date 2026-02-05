@@ -1,0 +1,42 @@
+{
+  "ip": "192.168.1.100",
+  "hostname": "malicious-server.example.com",
+  "threat_score": 85,
+  "category": "malware",
+  "first_seen": "2024-01-15T10:30:00Z",
+  "last_seen": "2024-01-16T05:45:12Z",
+  "indicators": [
+    {
+      "type": "C2",
+      "port": 8443,
+      "protocol": "https"
+    },
+    {
+      "type": "data_exfil",
+      "port": 443,
+      "protocol": "https"
+    }
+  ],
+  "geolocation": {
+    "country": "RU",
+    "city": "Moscow",
+    "latitude": 55.7558,
+    "longitude": 37.6173
+  },
+  "tags": ["botnet", "ransomware", "apt29"],
+  "confidence": "high",
+  "source": "threat_intel_feed",
+  "associated_malware": [
+    "TrickBot",
+    "Emotet"
+  ],
+  "internal_reference_id": "TI-2024-00156",
+  "analyst_notes": "Confirmed C2 infrastructure for APT29 campaign targeting financial sector",
+  "raw_packet_data": "0x4500003c1c4640004006b1e6c0a801...",
+  "debug_timestamp": 1705385112,
+  "_internal_processing_flags": {
+    "processed": true,
+    "validation_status": "complete",
+    "enrichment_version": "2.1.5"
+  }
+}
